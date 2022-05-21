@@ -9,7 +9,15 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css" />
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
-  
+    <style>
+        td.details-control {
+            background: url('../resources/details_open.png') no-repeat center center;
+            cursor: pointer;
+        }
+        tr.details td.details-control {
+            background: url('../resources/details_close.png') no-repeat center center;
+        }
+    </style>
  </head>
  <body>
   <div class="container">    
@@ -51,6 +59,7 @@
     <table id="customer_data" style="font-size: 13px; width: 100%" class="table table-sm table-hover">
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Customer Name</th>
                             <th>Gender</th>
                             <th>Address</th>
@@ -74,8 +83,18 @@ $(document).ready(function(){
 
     function fill_datatable(filter_gender = '', filter_country = '')
     {
+        function format(d) {
+            return (
+                //'<tr role="row" class="odd">'+
+                    '<td class="details-control sorting_1"></td>'+
+                    '<td>Maria Anders</td><td>Female</td><td>Obere Str. 57</td>'+
+                    '<td>Berlin</td><td>12209</td><td>Germany</td>'
+                //'</tr>'
+            );
+        }
+
         var dataTable = $('#customer_data').DataTable({
-            paging: false,
+            paging: false,  
             processing: true,
             serverSide: true,
             scrollY:"350px",
@@ -88,6 +107,12 @@ $(document).ready(function(){
                 data:{filter_gender:filter_gender, filter_country:filter_country}
             },
             columns: [
+                {
+                class: 'details-control',
+                orderable: false,
+                data: null,
+                defaultContent: '',
+                },
                 {
                     data:'CustomerName',
                     name:'CustomerName'
@@ -114,29 +139,41 @@ $(document).ready(function(){
                 }
             ]
         });
-    }
 
-    $('#filter').click(function(){
-        var filter_gender = $('#filter_gender').val();
-        var filter_country = $('#filter_country').val();
 
-        if(filter_gender != '' &&  filter_gender != '')
-        {
-            $('#customer_data').DataTable().destroy();
-            fill_datatable(filter_gender, filter_country);
-        }
-        else
-        {
-            alert('Select Both filter option');
-        }
-    });
+        // Array to track the ids of the details displayed rows
+        var detailRows = [];
+        
+        $('#customer_data tbody').on('click', 'tr td.details-control', function () {
+            var tr = $(this).closest('tr');
+            var row = dataTable.row(tr);
+            var idx = detailRows.indexOf(tr.attr('id'));
 
-    $('#reset').click(function(){
-        $('#filter_gender').val('');
-        $('#filter_country').val('');
-        $('#customer_data').DataTable().destroy();
-        fill_datatable();
-    });
+            if (row.child.isShown()) {
+                tr.removeClass('details');
+                row.child.hide();
+
+                // Remove from the 'open' array
+                detailRows.splice(idx, 1);
+            } else {
+                tr.addClass('details');
+                row.child(format(row.data())).show();
+
+                // Add to the 'open' array
+                if (idx === -1) {
+                    detailRows.push(tr.attr('id'));
+                }
+            }
+        });
+
+        // On each draw, loop over the `detailRows` array and show any child rows
+        dataTable.on('draw', function () {
+            detailRows.forEach(function(id, i) {
+                $('#' + id + ' td.details-control').trigger('click');
+            });
+        });
+
+    }//End of DataTables
 
 });
 </script>
